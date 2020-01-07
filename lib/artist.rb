@@ -20,30 +20,60 @@ class Artist
   end
 
 
-def self.clear
-  DB.exec("DELETE FROM artists *;")
-end
+  def self.clear
+    DB.exec("DELETE FROM artists *;")
+  end
 
-def self.find(id)
-  artist = DB.exec("SELECT * FROM artists WHERE id = #{id};").first
-  name = artist.fetch("name")
-  id = artist.fetch("id").to_i
-  Artist.new({:name => name, :id => id})
-end
+  def self.find(id)
+    artist = DB.exec("SELECT * FROM artists WHERE id = #{id};").first
+    name = artist.fetch("name")
+    id = artist.fetch("id").to_i
+    Artist.new({:name => name, :id => id})
+  end
 
-def save
-  result = DB.exec("INSERT INTO artists (name) VALUES ('#{@name}') RETURNING id;")
-  @id = result.first().fetch("id").to_i
-end
+  def save
+    result = DB.exec("INSERT INTO artists (name) VALUES ('#{@name}') RETURNING id;")
+    @id = result.first().fetch("id").to_i
+  end
 
-def ==(artist_to_compare)
-  self.name().downcase().eql?(artist_to_compare.name.downcase()) 
-  # && self.a().downcase().eql?(artist_to_compare.artist.downcase())
-end
+  def ==(artist_to_compare)
+    self.name().downcase().eql?(artist_to_compare.name.downcase())
+  end
 
-def delete
- DB.exec("DELETE FROM artists WHERE id = #{@id};")
- DB.exec("DELETE FROM songs WHERE artist_id = #{@id};")
-end
+  def delete
+    DB.exec("DELETE FROM artists WHERE id = #{@id};")
+    # DB.exec("DELETE FROM songs WHERE artist_id = #{@id};")
+  end
+
+  def update(attributes)
+    if (attributes.has_key?(:name)) && (attributes.fetch(:name) != nil)
+      @name = attributes.fetch(:name)
+      DB.exec("UPDATE artists SET name = '#{@name}' WHERE id = #{@id};")
+    end
+    album_name = attributes.fetch(:album_name)
+    if album_name != nil
+      album = DB.exec("SELECT * FROM albums WHERE lower(name) = '#{album_name.downcase}';").first()
+      if album != nil
+        DB.exec("INSERT INTO albums_artists (album_id, artist_id) VALUES (#{album['id'].to_i}, #{@id.to_i});")
+      end
+    end
+  end
+
+  def albums
+    albums_array = []
+    results = DB.exec("SELECT * FROM albums_artists WHERE artist_id = #{@id};")
+    results.each() do |result|
+      new_album_id = result.fetch("album_id")
+      album = DB.exec("SELECT * FROM albums WHERE id = #{new_album_id};").first()
+      name = album.fetch("name")
+      year = album.fetch("year")
+      genre = album.fetch("genre")
+      artist = album.fetch("artist")
+      status = album.fetch("status")
+      albums_array.push(Album.new({:name => name, :id => new_album_id, :year => year, :genre => genre, :artist => artist, :status => status}))
+    end
+    albums_array
+  end
+
 
 end

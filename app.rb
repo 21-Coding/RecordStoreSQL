@@ -2,6 +2,7 @@ require('sinatra')
 require('sinatra/reloader')
 require('./lib/album')
 require('./lib/song')
+require('./lib/artist')
 require('pry')
 require("pg")
 
@@ -15,10 +16,17 @@ get('/') do
 end
 
 get('/albums') do
-      @albums = Album.all
-      erb(:albums)
-    end
-
+  if params["clear"]
+    @albums = Album.clear()
+  elsif params["search_input"]
+    @albums = Album.search(params["search_input"])
+  elsif params["sort_list"]
+    @albums = Album.sort()
+  else
+    @albums = Album.all
+  end
+  erb(:albums)
+end
 
 get('/albums/new') do
   erb(:new_album)
@@ -35,8 +43,6 @@ post('/albums') do
   genre = params[:album_genre]
   artist = params[:album_artist]
   album = Album.new(:name => name, :id => nil, :year => year, :genre => genre, :artist => artist, :status => nil)
-  # new_search = album.add_search
-  # album = Album.new(name, nil, new_search)
   album.save()
   @albums = Album.all
   erb(:albums)
@@ -53,14 +59,13 @@ patch('/albums/:id') do
     @album = Album.find(params[:id].to_i())
     @album.sold()
     @albums = Album.all
-    erb(:albums)
   else
     @album = Album.find(params[:id].to_i())
     @album.update(:name => params[:name], :year => params[:year], :genre => params[:genre], :artist => params[:artist])
     # @album = Album.add_search
     @albums = Album.all
-    erb(:album)
   end
+  erb(:album)
 
 end
 
@@ -101,4 +106,44 @@ delete('/albums/:id/songs/:song_id') do
   song.delete
   @album = Album.find(params[:id].to_i())
   erb(:album)
+end
+
+get('/artists') do
+  if params["clear"]
+    @artists = Artist.clear()
+  elsif params["search_input"]
+    @artists = Artist.search(params["search_input"])
+  elsif params["sort_list"]
+    @artists = Artist.sort()
+  else
+    @artists = Artist.all
+  end
+  erb(:artists)
+end
+
+get('/artists/:id') do
+  @artist = Artist.find(params[:id].to_i())
+  erb(:artists)
+end
+
+post('/artists') do
+  name = params[:album_name]
+  artist = Artist.new(name, nil)
+  artist.save()
+  @artists = Artist.all()
+  erb(:artists)
+end
+
+patch('/artists/:id') do
+@artist  = Artist.find(params[:id].to_i())
+@artist.update(params[:name])
+@artists = Artist.all
+erb(:artist)
+end
+
+delete('/artists/:id') do
+  @artist = Artist.find(params[:id].to_i())
+  @artist.delete()
+  @artists = Artist.all
+  erb(:artists)
 end
